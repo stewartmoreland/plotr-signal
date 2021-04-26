@@ -1,0 +1,35 @@
+version: '3'
+services:
+  app:
+    build: .
+    container_name: plotr-signal
+    working_dir: /app
+    env_file: secrets.env
+    environment:
+      FLASK_APP: ./plotr_signal/main.py
+      DATABASE_URI: postgresql://postgres:postgres@db/plotr
+    volumes:
+      - ./:/app
+    ports:
+      - 5000:5000
+    depends_on:
+      - 'db'
+
+  db:
+    image: postgres:12-alpine
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_DB=plotr
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  influx:
+    image: influxdb:2.0.4
+    ports:
+      - 8086:8086
+    volumes:
+      - influxdb:/.influxdbv2
+
+volumes: 
+  influxdb:
