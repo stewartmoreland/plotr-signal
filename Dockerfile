@@ -1,9 +1,8 @@
-FROM python:3.8-slim-buster
+FROM python:3.8-alpine
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    gcc && \
-    pip install --upgrade pip \
+RUN apk add --no-cache postgresql-libs && \
+    apk add --no-cache --virtual .build-deps build-base gcc musl-dev postgresql-dev && \
+    pip install --upgrade pip &&\
     pip install pipenv
 
 COPY ./ /app/
@@ -11,6 +10,8 @@ COPY ./ /app/
 WORKDIR /app
 
 RUN pipenv install -e .
+
+RUN apk --purge del .build-deps
 
 EXPOSE 5000
 

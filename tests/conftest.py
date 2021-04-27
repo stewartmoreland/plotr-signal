@@ -1,8 +1,8 @@
 from pytest import fixture
 from mock import patch
 
-from signal.flaskr import create_app
-from signal.conf import Config
+from plotr_signal.flaskr import create_app
+from plotr_signal.conf import Config
 
 
 class TestingConfig(Config):

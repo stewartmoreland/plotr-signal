@@ -8,6 +8,10 @@ services:
     environment:
       FLASK_APP: ./plotr_signal/main.py
       DATABASE_URI: postgresql://postgres:postgres@db/plotr
+      INFLUXDB_V2_URL: http://influx:8086
+      INFLUXDB_V2_ORG: plotr
+      INFLUXDB_V2_TOKEN: "2MUfwwkDfufDIO3xF8b1E8y3FzUhQFTlqNYlfinDgVTcl3Y6risJ9bnQXp8w458WVX8JKWclY75G5vMpoew92A=="
+      INFLUXDB_V2_VERIFY_SSL: "false"
     volumes:
       - ./:/app
     ports:
@@ -19,6 +23,8 @@ services:
     image: postgres:12-alpine
     ports:
       - 5432:5432
+    volumes:
+      - postgres:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=plotr
       - POSTGRES_USER=postgres
@@ -32,4 +38,5 @@ services:
       - influxdb:/.influxdbv2
 
 volumes: 
+  postgres:
   influxdb:

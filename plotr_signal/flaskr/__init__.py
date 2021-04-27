@@ -10,7 +10,7 @@ from flask import Flask
 from flask.json import JSONEncoder
 
 from plotr_signal.routes.root import v1_root
-from plotr_signal.routes.equities import v1_insert_equity, v1_insert_equity_price
+from plotr_signal.routes.equities import v1_equity, v1_equity_price, v1_list_equities
 
 
 def create_app(config_object):
@@ -39,8 +39,9 @@ def create_app(config_object):
 
     # Register api blueprints
     app.register_blueprint(v1_root)
-    app.register_blueprint(v1_insert_equity)
-    app.register_blueprint(v1_insert_equity_price)
+    app.register_blueprint(v1_equity)
+    app.register_blueprint(v1_equity_price)
+    app.register_blueprint(v1_list_equities)
 
     # Register global exception handler
     # AppExceptionHandler(app=app)

@@ -12,6 +12,7 @@ setup(
         'sqlalchemy==1.4.11',
         'psycopg2-binary==2.8.6',
         'Werkzeug==1.0.1',
+        'influxdb-client[ciso]==1.16.0',
         'polygon-api-client==0.1.9'
     ],
     setup_requires=[

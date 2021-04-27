@@ -18,9 +18,12 @@ class Config(object):
     TESTING = False
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY')
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI') or \
-        'sqlite:///' + os.path.join(basedir, '/tmp/app.db')
+        'sqlite:///' + os.path.join(basedir, 'tmp/app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     POLYGON_API_KEY = os.environ.get('POLYGON_API_KEY')
+    INFLUXDB_V2_URL = os.environ.get('INFLUXDB_V2_URL')
+    INFLUXDB_V2_ORG = os.environ.get('INFLUXDB_V2_ORG')
+    INFLUXDB_V2_TOKEN = os.environ.get('INFLUXDB_V2_TOKEN')
 
 
 class ProductionConfig(Config):
@@ -37,6 +40,7 @@ class LocalConfig(Config):
     PORT = 5000
     URL_SCHEME = 'http'
     SESSION_COOKIE_SECURE = False
+    INFLUXDB_V2_VERIFY_SSL = False
 
 
 config = {
