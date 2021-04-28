@@ -11,7 +11,8 @@ WORKDIR /app
 
 RUN pipenv install -e .
 
-RUN apk --purge del .build-deps
+RUN apk add --no-cache libstdc++ && \
+    apk --purge del .build-deps
 
 EXPOSE 5000
 

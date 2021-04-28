@@ -13,7 +13,9 @@ setup(
         'psycopg2-binary==2.8.6',
         'Werkzeug==1.0.1',
         'influxdb-client[ciso]==1.16.0',
-        'polygon-api-client==0.1.9'
+        'polygon-api-client==0.1.9',
+        'numpy==1.20.2',
+        'pandas==1.2.4'
     ],
     setup_requires=[
         'pytest-runner'

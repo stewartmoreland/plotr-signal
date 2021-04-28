@@ -53,7 +53,16 @@ def create_app(config_object):
         Returns:
             Response: Empty string and status code of 200
         """
-        return 'up'
+        from plotr_signal.modules.influx import Influx
+        from plotr_signal.database import db_session
+
+        influxdb_client = Influx()
+
+        return {
+            "flask": "online",
+            "postgres": db_session.is_active,
+            "influxdb": influxdb_client.client.health().status
+        }
 
     @app.teardown_appcontext
     def shutdown_session(exception=None):
