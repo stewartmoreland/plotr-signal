@@ -15,7 +15,8 @@ setup(
         'influxdb-client[ciso]==1.16.0',
         'polygon-api-client==0.1.9',
         'numpy==1.20.2',
-        'pandas==1.2.4'
+        'pandas==1.2.4',
+        'sortedcontainers==2.3.0'
     ],
     setup_requires=[
         'pytest-runner'
@@ -29,7 +30,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'plotr-signal-api = signal.main:main',
+            'plotr-signal-api = plotr_signal.main:main',
         ]
     }
 )

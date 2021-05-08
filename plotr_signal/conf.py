@@ -23,6 +23,7 @@ class Config(object):
     POLYGON_API_KEY = os.environ.get('POLYGON_API_KEY')
     INFLUXDB_V2_URL = os.environ.get('INFLUXDB_V2_URL')
     INFLUXDB_V2_ORG = os.environ.get('INFLUXDB_V2_ORG')
+    INFLUXDB_V2_ORG_ID = os.environ.get('INFLUXDB_V2_ORG_ID')
     INFLUXDB_V2_TOKEN = os.environ.get('INFLUXDB_V2_TOKEN')
 
 

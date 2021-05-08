@@ -7,7 +7,7 @@ class Polygon(object):
 
     def get_historical_data(self, ticker, from_, to, 
                             multiplier='1', interval='minute', unadjusted=False):
-        data = self.client.stocks_equities_aggregates(ticker,multiplier,interval,from_,to,unadjusted=unadjusted)
+        data = self.client.stocks_equities_aggregates(ticker,multiplier,interval,from_,to,unadjusted=unadjusted,limit='50000')
 
         return data
 

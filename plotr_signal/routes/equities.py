@@ -15,8 +15,10 @@ from plotr_signal.modules.polygon import Polygon
 v1_equity = Blueprint('insert-equity', __name__, url_prefix='/v1')
 v1_equity_price = Blueprint('insert-equity-price-data', __name__, url_prefix='/v1')
 v1_list_equities = Blueprint('list-equities', __name__, url_prefix='/v1')
+v1_equity_macd = Blueprint('macd-time-series', __name__, url_prefix='/v1')
+v1_equity_rsi = Blueprint('relative-strength-index', __name__, url_prefix='/v1')
 
-@v1_equity.route('/equities/<symbol>', methods=['GET','POST'])
+@v1_equity.route('/equities/<symbol>', methods=['GET','POST', 'DELETE'])
 def insert_equity(symbol):
     """
     Adds ticker symbol to be tracked.
@@ -38,12 +40,13 @@ def insert_equity(symbol):
             db_session.commit()
             return {
                 "status": 200,
-                "body": f"Successfully entered record for {symbol}."
+                "body": f"Successfully entered record for {equity.name}."
             }
         except IntegrityError as e:
             return {
                 "status": 400,
-                "body": "Duplicate entry found in table."
+                "body": "Duplicate entry found in table.",
+                "message": json.dumps(e.detail)
             }
 
     elif request.method == 'GET':
@@ -60,7 +63,24 @@ def insert_equity(symbol):
         except SQLAlchemyError as e:
             return {
                 "status": 400,
-                "body": "No equity found from ticker value"
+                "body": f"No entry found for {symbol}",
+                "message": json.dumps(e.__dict__)
+            }
+    
+    elif request.method == 'DELETE':
+        try:
+            equity = Symbols.query.filter(Symbols.ticker == symbol).first()
+            db_session.delete(equity)
+            db_session.commit()
+            return {
+                "status": 200,
+                "body": f"Successfully removed record for {equity.name}"
+            }
+        except IntegrityError as e:
+            return {
+                "status": 400,
+                "body": f"No entry found for {symbol}",
+                "message": json.dumps(e.detail)
             }
 
 @v1_list_equities.route('/equities', methods=['GET'])
@@ -81,7 +101,7 @@ def get_equities_list():
     return response
 
 @v1_equity_price.route('/equities/<symbol>/price', methods=['POST'])
-def equity_price(symbol):
+def load_equity_price(symbol):
     """
     Posts price details to time series database as a Pandas DataFrame for the requested ticker symbol.
     @symbol : str - path parameter for the desired ticker symbol to be imported
@@ -96,21 +116,117 @@ def equity_price(symbol):
     body = json.loads(request.get_data())
 
     response = polygon_client.get_historical_data(escape(symbol), body['from_'], body['to'])
-    app.logger.info(response)
+    results = response.__dict__
 
-    for result in response.results:
-        result['t'] = datetime.fromtimestamp(result['t']/1000.0)
-        df = DataFrame(data=result, index=[result['t']])
-        df['o'] = df['o'].astype(float)
-        df['c'] = df['c'].astype(float)
-        df['h'] = df['h'].astype(float)
-        df['l'] = df['l'].astype(float)
-        df['v'] = df['v'].astype(float)
-        df['vw'] = df['vw'].astype(float)
-        
-        influx_client.write_dataframe(dataframe=df, bucket=symbol)
+    # result['t'] = datetime.fromtimestamp(result['t']/1000.0)
+    df = DataFrame(data=results['results'])
+    df['t'] = to_datetime(df['t'], unit='ms')
+    df.rename(columns={ 't': 'timestamp' }, inplace=True)
+    df.set_index(['timestamp'], inplace=True)
+    for column in ['o', 'c', 'h', 'l', 'v', 'vw']:
+        df[column] = df[column].astype(float)
+    
+    df.rename(columns={
+        "o": "open",
+        "c": "close",
+        "h": "high",
+        "l": "low",
+        "v": "volume",
+        "vw": "weighted_volume"
+    }, inplace=True)
+    
+    app.logger.info(df.head())
+
+    influx_client.write_dataframe(dataframe=df, bucket=symbol, measurement='price')
 
     return {
         "status": 200,
-        "body": f"Successfully loaded time series pricing data for {symbol} from {body['from_']} to {body['to']}"
+        "body": f"Successfully loaded {str(response.resultsCount)} price records for {symbol} from {body['from_']} to {body['to']} into  time series database"
+    }
+
+@v1_equity_macd.route('/equities/<symbol>/macd', methods=['POST'])
+def load_equity_macd(symbol):
+    from plotr_signal.modules.influx import Influx
+    from pandas import DataFrame
+
+    body = json.loads(request.get_data())
+
+    influx_client = Influx()
+
+    df = influx_client.get_equity_field_dataframe(symbol=symbol, from_=body['from_'], to=body['to'], interval=body['interval'])
+
+    ema12 = df.ewm(span=12, adjust=False).mean()
+    ema26 = df.ewm(span=26, adjust=False).mean()
+    macd = ema12 - ema26
+    signal = macd.ewm(span=9, adjust=True).mean()
+
+    macd.columns = ['table', 'macd']
+    del macd['table']
+    signal.columns = ['table', 'signal']
+    del signal['table']
+
+    influx_client.write_dataframe(dataframe=macd, bucket=symbol, measurement='macd')
+    influx_client.write_dataframe(dataframe=signal, bucket=symbol, measurement='macd')
+
+    # try:
+    #     macd['macd'].strftime('%Y-%m-%d %H:%M:%S:%f')
+    #     signal['signal'].strftime('%Y-%m-%d %H:%M:%S:%f')
+
+    #     macd_dict = macd.to_dict()
+    #     signal_dict = signal.to_dict()
+    # except KeyError as e:
+    #     raise e
+
+    # return {
+    #     "status": 200,
+    #     "body": {
+    #         "macd": json.dumps(macd_dict['macd']),
+    #         "signal": json.dumps(signal_dict['signal'])
+    #     }
+    # }
+
+    return {
+        "status": 200,
+        "body": {
+            "macd": macd.to_json(),
+            "signal": signal.to_json()
+        }
+    }
+
+@v1_equity_rsi.route('/equities/<symbol>/rsi', methods=['POST'])
+def load_relative_strength_index(symbol):
+    from pandas import DataFrame
+    from plotr_signal.modules.influx import Influx
+    import numpy as np
+
+    body = json.loads(request.get_data())
+    time_period = int
+
+    def rma(x, n, y0):
+        a = (n-1) / n
+        ak = a**np.arange(len(x)-1, -1, -1)
+        return np.r_[np.full(n, np.nan), y0, np.cumsum(ak * x) / ak / n + y0 * a**np.arange(1, len(x)+1)]
+    
+    if 'time_period' in body.keys():
+        time_period = body['time_period']
+    else:
+        time_period = 14
+
+    equity_df = Influx().get_equity_field_dataframe(symbol, from_=body['from_'], to=body['to'], interval='15m')
+
+    df = DataFrame()
+
+    df['change'] = equity_df['_value'].diff()
+    df['gain'] = df.change.mask(df.change < 0, 0.0)
+    df['loss'] = -df.change.mask(df.change > 0, -0.0)
+    df['avg_gain'] = rma(df.gain[time_period+1:].to_numpy(), time_period, np.nansum(df.gain.to_numpy()[:time_period+1])/time_period)
+    df['avg_loss'] = rma(df.loss[time_period+1:].to_numpy(), time_period, np.nansum(df.loss.to_numpy()[:time_period+1])/time_period)
+    df['rs'] = df.avg_gain / df.avg_loss
+    df['rsi_14'] = 100 - (100 / (1 + df.rs))
+
+    Influx().write_dataframe(dataframe=df, bucket=symbol, measurement='rsi')
+
+    return {
+        "status": 200,
+        "body": f"Successfully wrote RSI values for {symbol}"
     }
