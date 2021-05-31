@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+.env/
+*.py[cod]
+*$py.class
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache
+
+# Environments
+*.env
+*.venv
+env/
+venv/
+ENV/
+*.env.bak/
+*.venv.bak/
+
+# IDE
+.vscode
+.idea
+
+# Secrets
+secrets
+
+# Local Content
+tmp/
+.DS_Store

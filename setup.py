@@ -12,11 +12,12 @@ setup(
         'sqlalchemy==1.4.11',
         'psycopg2-binary==2.8.6',
         'Werkzeug==1.0.1',
-        'influxdb-client[ciso]==1.16.0',
         'polygon-api-client==0.1.9',
         'numpy==1.20.2',
         'pandas==1.2.4',
-        'sortedcontainers==2.3.0'
+        'sortedcontainers==2.3.0',
+        'pydruid[pandas]==0.6.2',
+        'confluent-kafka==1.7.0'
     ],
     setup_requires=[
         'pytest-runner'

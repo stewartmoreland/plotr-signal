@@ -118,7 +118,6 @@ def load_equity_price(symbol):
     response = polygon_client.get_historical_data(escape(symbol), body['from_'], body['to'])
     results = response.__dict__
 
-    # result['t'] = datetime.fromtimestamp(result['t']/1000.0)
     df = DataFrame(data=results['results'])
     df['t'] = to_datetime(df['t'], unit='ms')
     df.rename(columns={ 't': 'timestamp' }, inplace=True)
@@ -147,82 +146,37 @@ def load_equity_price(symbol):
 @v1_equity_macd.route('/equities/<symbol>/macd', methods=['POST'])
 def load_equity_macd(symbol):
     from plotr_signal.modules.influx import Influx
-    from pandas import DataFrame
+    from plotr_signal.modules.quantlib import QuantLib
 
     body = json.loads(request.get_data())
-
     influx_client = Influx()
-
     df = influx_client.get_equity_field_dataframe(symbol=symbol, from_=body['from_'], to=body['to'], interval=body['interval'])
-
-    ema12 = df.ewm(span=12, adjust=False).mean()
-    ema26 = df.ewm(span=26, adjust=False).mean()
-    macd = ema12 - ema26
-    signal = macd.ewm(span=9, adjust=True).mean()
-
-    macd.columns = ['table', 'macd']
-    del macd['table']
-    signal.columns = ['table', 'signal']
-    del signal['table']
-
+    macd = QuantLib.MACD(price_data=df)
     influx_client.write_dataframe(dataframe=macd, bucket=symbol, measurement='macd')
-    influx_client.write_dataframe(dataframe=signal, bucket=symbol, measurement='macd')
-
-    # try:
-    #     macd['macd'].strftime('%Y-%m-%d %H:%M:%S:%f')
-    #     signal['signal'].strftime('%Y-%m-%d %H:%M:%S:%f')
-
-    #     macd_dict = macd.to_dict()
-    #     signal_dict = signal.to_dict()
-    # except KeyError as e:
-    #     raise e
-
-    # return {
-    #     "status": 200,
-    #     "body": {
-    #         "macd": json.dumps(macd_dict['macd']),
-    #         "signal": json.dumps(signal_dict['signal'])
-    #     }
-    # }
 
     return {
         "status": 200,
         "body": {
-            "macd": macd.to_json(),
-            "signal": signal.to_json()
+            "macd": macd['macd'].to_json(),
+            "signal": macd['signal'].to_json()
         }
     }
 
 @v1_equity_rsi.route('/equities/<symbol>/rsi', methods=['POST'])
 def load_relative_strength_index(symbol):
-    from pandas import DataFrame
     from plotr_signal.modules.influx import Influx
-    import numpy as np
+    from plotr_signal.modules.quantlib import QuantLib
 
     body = json.loads(request.get_data())
     time_period = int
 
-    def rma(x, n, y0):
-        a = (n-1) / n
-        ak = a**np.arange(len(x)-1, -1, -1)
-        return np.r_[np.full(n, np.nan), y0, np.cumsum(ak * x) / ak / n + y0 * a**np.arange(1, len(x)+1)]
-    
     if 'time_period' in body.keys():
         time_period = body['time_period']
     else:
         time_period = 14
 
     equity_df = Influx().get_equity_field_dataframe(symbol, from_=body['from_'], to=body['to'], interval='15m')
-
-    df = DataFrame()
-
-    df['change'] = equity_df['_value'].diff()
-    df['gain'] = df.change.mask(df.change < 0, 0.0)
-    df['loss'] = -df.change.mask(df.change > 0, -0.0)
-    df['avg_gain'] = rma(df.gain[time_period+1:].to_numpy(), time_period, np.nansum(df.gain.to_numpy()[:time_period+1])/time_period)
-    df['avg_loss'] = rma(df.loss[time_period+1:].to_numpy(), time_period, np.nansum(df.loss.to_numpy()[:time_period+1])/time_period)
-    df['rs'] = df.avg_gain / df.avg_loss
-    df['rsi_14'] = 100 - (100 / (1 + df.rs))
+    df = QuantLib.RSI(price_data=equity_df, time_period=time_period)
 
     Influx().write_dataframe(dataframe=df, bucket=symbol, measurement='rsi')
 

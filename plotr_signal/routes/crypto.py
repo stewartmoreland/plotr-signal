@@ -8,6 +8,8 @@ from flask.globals import request
 from markupsafe import escape
 from datetime import datetime
 from numpy.core.fromnumeric import prod
+from pandas.core.tools.datetimes import to_datetime
+from influxdb_client import Error as InfluxError
 
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from requests.exceptions import HTTPError
@@ -81,6 +83,8 @@ def load_crypto_products():
 @v1_get_currency.route('/crypto/<currency>', methods=['GET'])
 def get_currency_details(currency:str):
     from plotr_signal.database.models import CryptoCurrencies
+    equity = CryptoCurrencies.query.filter(CryptoCurrencies.currency == currency).first()
+    return json.dumps(equity)
 
 @v1_list_products.route('/crypto/products/<quote_currency>', methods=['GET'])
 def get_equities_list(quote_currency):
@@ -114,12 +118,23 @@ def equity_price(product):
     influx_client = Influx()
     body = json.loads(request.get_data())
 
-    response = public_client.get_product_historic_rates(product_id=product, start=body['from_'], end=body['to'])
-    app.logger.info(response)
+    response = public_client.get_product_historic_rates(product_id=product, start=body['from_'], end=body['to'], granularity=body['interval'])
 
-    # influx_client.write_dataframe(dataframe=df, bucket=symbol)
+    df = DataFrame(data=response, columns=[ 'time', 'low', 'high', 'open', 'close', 'volume' ])
+    df['time'] = to_datetime(df['time'], unit='s')
+    df = df.set_index(df['time'])
+    app.logger.info(df.head())
+    for column in [ 'low', 'high', 'open', 'close', 'volume' ]:
+        df[column] = df[column].astype(float)
+    
+    df['price'] = df[['low','high','open','close']].mean(axis=1)
+
+    try:
+        influx_client.write_dataframe(dataframe=df, bucket=product, measurement='price')
+    except:
+        app.logger.error("Generic error writing to Influx")
 
     return {
         "status": 200,
-        # "body": f"Successfully loaded time series pricing data for {symbol} from {body['from_']} to {body['to']}"
+        "body": f"Successfully loaded time series pricing data for {product} from {body['from_']} to {body['to']}"
     }
