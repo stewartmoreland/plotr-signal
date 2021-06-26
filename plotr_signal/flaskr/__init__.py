@@ -12,7 +12,7 @@ from flask.json import JSONEncoder
 from pandas._libs.tslibs import Timestamp
 from plotr_signal.modules.exceptions import AppExceptionHandler
 
-from plotr_signal.routes.root import v1_root, test_dev_kafka_create_topic
+from plotr_signal.routes.root import v1_root
 from plotr_signal.routes.equities import v1_equity, v1_equity_price, v1_list_equities, v1_equity_macd, v1_equity_rsi
 from plotr_signal.routes.crypto import v1_load_crypto_currencies, v1_load_crypto_products, v1_list_products, v1_get_currency, v1_crypto_load_price_history
 
@@ -34,7 +34,7 @@ def create_app(config_object):
 
     # Configuration to minify JSON output
     app.json_encoder = MinifyJSONEncoder
-    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
     with app.app_context():
         from plotr_signal.database import db_session, init_db
@@ -52,7 +52,6 @@ def create_app(config_object):
     app.register_blueprint(v1_list_products)
     app.register_blueprint(v1_get_currency)
     app.register_blueprint(v1_crypto_load_price_history)
-    app.register_blueprint(test_dev_kafka_create_topic)
 
     # Register global exception handler
     AppExceptionHandler(app=app)

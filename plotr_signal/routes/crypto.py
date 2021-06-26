@@ -16,12 +16,14 @@ from requests.exceptions import HTTPError
 
 from plotr_signal.modules import cbpro
 
+
 v1_load_crypto_currencies = Blueprint('crypto-insert-currencies', __name__, url_prefix='/v1')
 v1_load_crypto_products = Blueprint('crypto-insert-products', __name__, url_prefix='/v1')
 v1_get_currency = Blueprint('crypto-get-currency', __name__, url_prefix='/v1')
 v1_crypto_load_price_history = Blueprint('crypto-load-price-history', __name__, url_prefix='/v1')
 v1_list_crypto = Blueprint('crypto-list-currencies', __name__, url_prefix='/v1')
 v1_list_products = Blueprint('crypto-list-products', __name__, url_prefix='/v1')
+
 
 @v1_load_crypto_currencies.route('/crypto/import/currencies', methods=['POST'])
 def load_crypto_currencies():
@@ -50,6 +52,7 @@ def load_crypto_currencies():
         }
     except IntegrityError as e:
         raise e
+
 
 @v1_load_crypto_products.route('/crypto/import/products', methods=['POST'])
 def load_crypto_products():
@@ -80,11 +83,13 @@ def load_crypto_products():
     except IntegrityError as e:
         raise e
 
+
 @v1_get_currency.route('/crypto/<currency>', methods=['GET'])
 def get_currency_details(currency:str):
     from plotr_signal.database.models import CryptoCurrencies
     equity = CryptoCurrencies.query.filter(CryptoCurrencies.currency == currency).first()
-    return json.dumps(equity)
+    return json.dumps({"currency":equity.currency, "name":equity.name, "min_size":equity.min_size})
+
 
 @v1_list_products.route('/crypto/products/<quote_currency>', methods=['GET'])
 def get_equities_list(quote_currency):
@@ -103,6 +108,7 @@ def get_equities_list(quote_currency):
     
     return response
 
+
 @v1_crypto_load_price_history.route('/crypto/<product>/price/history', methods=['POST'])
 def equity_price(product):
     """
@@ -111,30 +117,32 @@ def equity_price(product):
     @method : POST
     @body : { "from_": "yyyy-mm-dd", "to": "yyyy-mm-dd" }
     """
-    from plotr_signal.modules.influx import Influx
+    # from plotr_signal.modules.influx import Influx
     from pandas import DataFrame
+    from plotr_signal.modules.kafka import KafkaProducer, KafkaError
 
     public_client = cbpro.PublicClient()
-    influx_client = Influx()
+    producer = KafkaProducer(conf=app.config['KAFKA_CONF'])
     body = json.loads(request.get_data())
 
     response = public_client.get_product_historic_rates(product_id=product, start=body['from_'], end=body['to'], granularity=body['interval'])
 
     df = DataFrame(data=response, columns=[ 'time', 'low', 'high', 'open', 'close', 'volume' ])
     df['time'] = to_datetime(df['time'], unit='s')
-    df = df.set_index(df['time'])
-    app.logger.info(df.head())
+    df.set_index(df['time'], drop=True, inplace=True)
     for column in [ 'low', 'high', 'open', 'close', 'volume' ]:
         df[column] = df[column].astype(float)
     
     df['price'] = df[['low','high','open','close']].mean(axis=1)
 
     try:
-        influx_client.write_dataframe(dataframe=df, bucket=product, measurement='price')
-    except:
-        app.logger.error("Generic error writing to Influx")
+        for idx, row in df.iterrows():
+            app.logger.info(f"{idx}: {row.to_json()}")
+            producer.write_msg(topic=product, msg=row.to_json(), timestamp=row['time'])
+    except KafkaError as e:
+        app.logger.error("Generic error writing to Kafka: {}".format(e))
 
     return {
         "status": 200,
-        "body": f"Successfully loaded time series pricing data for {product} from {body['from_']} to {body['to']}"
+        "body": df.to_json()
     }

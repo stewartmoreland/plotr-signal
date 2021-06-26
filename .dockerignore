@@ -43,3 +43,7 @@ secrets
 # Local Content
 tmp/
 .DS_Store
+Dockerfile
+.git/
+.gitignore
+.dockerignore
