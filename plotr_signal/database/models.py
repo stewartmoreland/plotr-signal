@@ -3,9 +3,11 @@ from enum import unique
 from sqlalchemy import Column, Integer, String, DateTime, Float
 from sqlalchemy.engine import base
 from sqlalchemy.sql.schema import ForeignKey, Index
+from sqlalchemy.sql.sqltypes import Boolean
 from plotr_signal.database import Base
 
 from sqlalchemy.orm import relationship
+
 
 class Users(Base):
     __tablename__ = 'users'
@@ -23,9 +25,10 @@ class Users(Base):
         self.last_name = last_name
         self.email = email
         self.base_currency = base_currency
-    
+
     def __repr__(self):
         return self
+
 
 class Symbols(Base):
     __tablename__ = 'symbols'
@@ -69,7 +72,7 @@ class CryptoCurrencies(Base):
     currency = Column(String(12), unique=True)
     name = Column(String(64), unique=True)
     min_size = Column(Float, unique=False)
-    
+
     def __init__(self, currency=None, name=None, min_size=None):
         self.currency = currency
         self.name = name
@@ -89,14 +92,18 @@ class CryptoProducts(Base):
     quote_currency = Column(String(8), unique=False)
     base_min_size = Column(Float, unique=False)
     base_max_size = Column(Float, unique=False)
-    
-    def __init__(self, product=None, name=None, base_currency=None, quote_currency=None, base_min_size=None, base_max_size=None):
+    supervised = Column(Boolean, unique=False, default=False)
+    stablecoin = Column(Boolean, unique=False, default=False)
+
+    def __init__(self, product=None, name=None, base_currency=None, quote_currency=None, base_min_size=None, base_max_size=None, supervised=None, stablecoin=None):
         self.product = product
         self.name = name
         self.base_currency = base_currency
         self.quote_currency = quote_currency
         self.base_min_size = base_min_size
         self.base_max_size = base_max_size
+        self.supervised = supervised
+        self.stablecoin = stablecoin
 
     def __repr__(self):
         return self

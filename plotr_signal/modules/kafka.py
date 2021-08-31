@@ -4,6 +4,7 @@ from confluent_kafka.error import KafkaError
 
 import certifi
 from datetime import datetime
+import pandas
 
 
 class KafkaProducer(object):
@@ -12,8 +13,10 @@ class KafkaProducer(object):
         self.producer = SerializingProducer(conf=self.conf)
         self.admin = KafkaAdmin(self.conf)
 
-    def write_msg(self, topic, msg, timestamp):
+    def write_msg(self, topic, msg, timestamp: pandas.Timestamp):
         self.admin.create_topic(topics=[topic])
+        if isinstance(timestamp, pandas.Timestamp):
+            timestamp.fromisoformat()
         epoch = timestamp_to_epoch(timestamp)
         self.producer.produce(topic=topic, value=msg, timestamp=epoch)
 
@@ -25,23 +28,25 @@ class KafkaConsumer(object):
 
 
 class KafkaAdmin(object):
-    def __init__(self, conf:dict):
-        self.admin = AdminClient(self.pop_schema_registry_params_from_config(conf))
+    def __init__(self, conf: dict):
+        self.admin = AdminClient(
+            self.pop_schema_registry_params_from_config(conf))
 
     @staticmethod
-    def pop_schema_registry_params_from_config(conf:dict):
+    def pop_schema_registry_params_from_config(conf: dict):
         """Remove potential Schema Registry related configurations from dictionary"""
         conf.pop('schema.registry.url', None)
         conf.pop('basic.auth.user.info', None)
         conf.pop('basic.auth.credentials.source', None)
         return conf
 
-    def create_topic(self, topics:list, partitions:int=3, replication_factor:int=1):
+    def create_topic(self, topics: list, partitions: int = 3, replication_factor: int = 1):
         """
             Create a topic if needed
         """
 
-        new_topics = [NewTopic(topic, num_partitions=partitions, replication_factor=replication_factor) for topic in topics]
+        new_topics = [NewTopic(topic, num_partitions=partitions,
+                               replication_factor=replication_factor) for topic in topics]
 
         request = self.admin.create_topics(new_topics)
         for topic, f in request.items():
@@ -66,6 +71,7 @@ def read_config(config_file):
                 conf[parameter] = value.strip()
     conf['ssl.ca.location'] = certifi.where()
     return conf
+
 
 def timestamp_to_epoch(timestamp, pattern='%d.%m.%Y %H:%M:%S', unit='ms'):
     import time
