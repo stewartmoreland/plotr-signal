@@ -14,7 +14,7 @@ from plotr_signal.modules.exceptions import AppExceptionHandler
 
 from plotr_signal.routes.root import v1_root
 from plotr_signal.routes.equities import v1_equity, v1_equity_price, v1_list_equities, v1_equity_macd, v1_equity_rsi
-from plotr_signal.routes.crypto import v1_load_crypto_currencies, v1_load_crypto_products, v1_list_products, v1_get_currency, v1_crypto_load_price_history
+from plotr_signal.routes.crypto import v1_load_crypto_currencies, v1_load_crypto_products, v1_list_products, v1_get_currency, v1_crypto_load_price_history, v1_set_stablecoin, v1_supervise_product, v1_crypto_import_price_history
 
 def create_app(config_object):
     """ Basic application factory for setting up the Flask app
@@ -33,8 +33,8 @@ def create_app(config_object):
     app.config.from_object(config_object)
 
     # Configuration to minify JSON output
-    app.json_encoder = MinifyJSONEncoder
-    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
+    app.json_encoder = CustomJSONEncoder
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
     with app.app_context():
         from plotr_signal.database import db_session, init_db
@@ -52,6 +52,9 @@ def create_app(config_object):
     app.register_blueprint(v1_list_products)
     app.register_blueprint(v1_get_currency)
     app.register_blueprint(v1_crypto_load_price_history)
+    app.register_blueprint(v1_set_stablecoin)
+    app.register_blueprint(v1_supervise_product)
+    app.register_blueprint(v1_crypto_import_price_history)
 
     # Register global exception handler
     AppExceptionHandler(app=app)
@@ -86,18 +89,28 @@ class MinifyJSONEncoder(JSONEncoder):
     key_separator = ':'
 
 class CustomJSONEncoder(JSONEncoder):
+    def _encode(self, obj):
+        if isinstance(obj, dict):
+            def transform_date(o):
+                return self._encode(o.isoformat() if isinstance(o, datetime) else o)
+            return {transform_date(k): transform_date(v) for k, v in obj.items()}
+        else:
+            return obj
+
+    def encode(self, obj):
+        return super(CustomJSONEncoder, self).encode(self._encode(obj))
+
     def default(self, obj):
         try:
             if isinstance(obj, datetime):
-                return obj.strftime("%Y-%m-%d %H:%M:%S:%f")
+                return obj.strftime("%Y-%m-%dT%H:%M:%S.%f")
             elif isinstance(obj, date):
-                return obj.strftime('%Y-%m-%d')
+                return obj.strftime("%Y-%m-%d")
             elif isinstance(obj, Timestamp):
-                return obj.strftime('%Y-%m-%d %H:%M:%S:%f')
+                return obj.strftime("%Y-%m-%dT%H:%M:%S.%f")
             iterable = iter(obj)
         except TypeError:
             pass
         else:
             return list(iterable)
-        
         return JSONEncoder.default(self, obj)

@@ -7,7 +7,6 @@ authorization, validation, and formatting of requests.
 import json
 from urllib import request, response, error
 from functools import wraps
-import logging
 
 import hashlib
 import hmac
@@ -15,8 +14,6 @@ import flask
 from flask import current_app as app, request, url_for
 from werkzeug.exceptions import Unauthorized, Forbidden, BadRequest
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 
 def verify_slack_signature(slack_signature=None, slack_request_timestamp=None):
     req = str.encode('v0:' + str(slack_request_timestamp) + ':') + request.get_data()

@@ -6,6 +6,7 @@ for the flask application context on start up.
 """
 import os
 import json
+import socket
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -25,6 +26,16 @@ class Config(object):
     INFLUXDB_V2_ORG = os.environ.get('INFLUXDB_V2_ORG')
     INFLUXDB_V2_ORG_ID = os.environ.get('INFLUXDB_V2_ORG_ID')
     INFLUXDB_V2_TOKEN = os.environ.get('INFLUXDB_V2_TOKEN')
+    DRUID_HOST = os.environ.get('DRUID_HOST')
+
+    REDIS_HOST = os.environ.get('REDIS_HOST')
+    REDIS_PORT = os.environ.get('REDIS_PORT') or '6379'
+    CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
+    CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}"
+
+    KAFKA_HOSTS = os.environ.get('KAFKA_SERVERS')
+    KAFKA_CONF = { 'bootstrap.servers': os.environ.get('KAFKA_SERVERS'),
+                   'client.id': socket.gethostname() }
 
 
 class ProductionConfig(Config):
