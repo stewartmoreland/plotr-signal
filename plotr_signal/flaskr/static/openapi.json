@@ -1,0 +1,54 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "plotr-signal",
+    "description": "Crypto & stock API by plotr.ai"
+  },
+  "paths": {
+    "/v1/crypto/products": {
+      "get": {
+        "tags": [
+          "crypto"
+        ],
+        "description": "Returns list of available crypto currency products from Coinbase Pro",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "quote_currency",
+            "required": false,
+            "description": "base currency to quote crypto product pricing",
+            "schema": {
+              "type": "string",
+              "example": "USD"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "hello in the requested language",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {
+                    "equities": [
+                      {
+                        "base_currency": "QUICK",
+                        "name": "QUICK/USD",
+                        "product": "QUICK-USD",
+                        "quote_currency": "USD",
+                        "supervised": false
+                      }
+                    ],
+                    "status": 200
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

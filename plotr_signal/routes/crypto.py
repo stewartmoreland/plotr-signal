@@ -144,8 +144,8 @@ def get_currency_details(currency: str):
     return json.dumps({"currency": equity.currency, "name": equity.name, "min_size": equity.min_size})
 
 
-@v1_list_products.route('/crypto/products/<quote_currency>', methods=['GET'])
-def get_equities_list(quote_currency):
+@v1_list_products.route('/crypto/products', methods=['GET'])
+def get_equities_list():
     """
     Gets list of tracked crypto currencies and ticker information.
 
@@ -159,9 +159,14 @@ def get_equities_list(quote_currency):
     elif 'stablecoin' in request.args.keys() and request.args.get('stablecoin') == "true":
         stablecoin = True
 
-    equities = CryptoProducts.query.filter(
-        CryptoProducts.quote_currency == quote_currency,
-        CryptoProducts.stablecoin == stablecoin).all()
+    if 'quote_currency' in request.args.keys():
+        quote_currency = request.args.get('quote_currency')
+        equities = CryptoProducts.query.filter(
+            CryptoProducts.quote_currency == quote_currency,
+            CryptoProducts.stablecoin == stablecoin).all()
+    else:
+        equities = CryptoProducts.query.filter(
+            CryptoProducts.stablecoin == stablecoin).all()
 
     response = {"status": 200, "equities": []}
     response['equities'] = [{"product": equity.product, "name": equity.name,

@@ -7,7 +7,7 @@ configuration and register handlers.
 import os, json
 from datetime import date, datetime
 
-from flask import Flask
+from flask import Flask, render_template
 from flask.json import JSONEncoder
 from pandas._libs.tslibs import Timestamp
 from plotr_signal.modules.exceptions import AppExceptionHandler
@@ -76,6 +76,11 @@ def create_app(config_object):
             "postgres": db_session.is_active,
             "influxdb": influxdb_client.client.health().status
         }
+    
+    @app.route('/api/docs')
+    def get_docs():
+        print('sending docs')
+        return render_template('swaggerui.html')
 
     @app.teardown_appcontext
     def shutdown_session(exception=None):
