@@ -20,17 +20,18 @@ setup(
     url='https://github.com/stewartmoreland/plotr-signal',
     include_package_data=True,
     install_requires=[
-        'flask==1.1.2',
-        'sqlalchemy==1.4.11',
-        'confluent-kafka==1.7.0',
-        'psycopg2-binary==2.8.6',
-        'Werkzeug==1.0.1',
-        'polygon-api-client==0.1.9',
-        'numpy==1.20.2',
-        'pandas==1.2.4',
-        'sortedcontainers==2.3.0',
-        'pydruid[pandas]==0.6.2',
-        'celery==5.1.2'
+        'flask>=2.1.1',
+        'marshmallow==3.15.0',
+        'gunicorn~=20.1.0',
+        'sqlalchemy~=1.4.35',
+        'psycopg2-binary==2.9.3',
+        'Werkzeug==2.1.1',
+        'apispec==5.1.1',
+        'apispec-webframeworks==0.5.2',
+        'polygon-api-client==0.2.11',
+        'numpy==1.22.3',
+        'pandas==1.4.2',
+        'sortedcontainers==2.4.0'
     ],
     setup_requires=[
         'pytest-runner'

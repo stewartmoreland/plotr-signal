@@ -7,14 +7,18 @@ configuration and register handlers.
 import os, json
 from datetime import date, datetime
 
-from flask import Flask, render_template
+from flask import Flask, jsonify, render_template
 from flask.json import JSONEncoder
-from pandas._libs.tslibs import Timestamp
+
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec_webframeworks.flask import FlaskPlugin
+
+from pandas._libs.tslibs.timestamps import Timestamp
 from plotr_signal.modules.exceptions import AppExceptionHandler
 
-from plotr_signal.routes.root import v1_root
-from plotr_signal.routes.equities import v1_equity, v1_equity_price, v1_list_equities, v1_equity_macd, v1_equity_rsi
-from plotr_signal.routes.crypto import v1_load_crypto_currencies, v1_load_crypto_products, v1_list_products, v1_get_currency, v1_crypto_load_price_history, v1_set_stablecoin, v1_supervise_product, v1_crypto_import_price_history
+from plotr_signal.routes import *
+
 
 def create_app(config_object):
     """ Basic application factory for setting up the Flask app
@@ -42,44 +46,66 @@ def create_app(config_object):
 
     # Register api blueprints
     app.register_blueprint(v1_root)
-    app.register_blueprint(v1_equity)
-    app.register_blueprint(v1_equity_price)
-    app.register_blueprint(v1_list_equities)
-    app.register_blueprint(v1_equity_macd)
-    app.register_blueprint(v1_equity_rsi)
-    app.register_blueprint(v1_load_crypto_currencies)
-    app.register_blueprint(v1_load_crypto_products)
-    app.register_blueprint(v1_list_products)
-    app.register_blueprint(v1_get_currency)
-    app.register_blueprint(v1_crypto_load_price_history)
-    app.register_blueprint(v1_set_stablecoin)
-    app.register_blueprint(v1_supervise_product)
-    app.register_blueprint(v1_crypto_import_price_history)
+    app.register_blueprint(v1_equities)
+    app.register_blueprint(v1_crypto)
 
     # Register global exception handler
     AppExceptionHandler(app=app)
 
+    def add_paths_for_blueprint(spec, blueprint, exclude=()):
+        bp_name = blueprint.name
+        for r in app.url_map.iter_rules():
+            ep = r.endpoint.split('.')
+            if len(ep) == 1:  # App endpoint, not processed here
+                break
+            elif len(ep) == 2:  # Blueprint endpoint
+                prefix, endpoint = ep[0], ep[1]
+                if prefix == bp_name and endpoint not in exclude:
+                    spec.path(view=app.view_functions[r.endpoint])
+            else:
+                raise ValueError("Not valid endpoint?", r.endpoint)
+
     @app.route('/health', methods=['GET'])
     def health_check():
         """ Root health check endpoint
-
+        
         Returns:
-            Response: Empty string and status code of 200
+            json (dict): A dictionary containing the health of the
+                application
         """
-        from plotr_signal.modules.influx import Influx
         from plotr_signal.database import db_session
 
-        influxdb_client = Influx()
+        return jsonify({
+            "flask": "OK",
+            "postgres": db_session.is_active
+        }), 200
 
-        return {
-            "flask": "online",
-            "postgres": db_session.is_active,
-            "influxdb": influxdb_client.client.health().status
-        }
+    @app.route('/apispec.json', methods=['GET'])
+    def get_swagger_json():
+        """ Get swagger json for the API
+        """
+        spec = APISpec(
+            title="plotr: Signal Analysis API",
+            version="1.0.0",
+            openapi_version="3.0.2",
+            plugins=[FlaskPlugin(), MarshmallowPlugin()],
+        )
+        add_paths_for_blueprint(spec, v1_root, exclude=['get_swagger_json'])
+        add_paths_for_blueprint(spec, v1_equities, exclude=['get_swagger_json'])
+        add_paths_for_blueprint(spec, v1_crypto, exclude=['get_swagger_json'])
+        return jsonify(spec.to_dict()), 200
     
-    @app.route('/api/docs')
-    def get_docs():
-        print('sending docs')
+    @app.route('/apispec', methods=['GET'])
+    def get_swagger_ui():
+        """ Serve the swagger docs from the /apispec directory
+
+        Args:
+            path (string): The path to the swagger docs
+
+        Returns:
+            Response: The swagger docs
+        """
+        app.logger.info('Serving docs')
         return render_template('swaggerui.html')
 
     @app.teardown_appcontext

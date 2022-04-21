@@ -18,7 +18,7 @@ from plotr_signal.modules.cbpro.cbpro_auth import CBProAuth
 class AuthenticatedClient(PublicClient):
     """ Provides access to Private Endpoints on the cbpro API.
 
-    All requests default to the live `api_url`: 'https://api.pro.coinbase.com'.
+    All requests default to the live `api_url`: 'https://api.exchange.coinbase.com'.
     To test your application using the sandbox modify the `api_url`.
 
     Attributes:
@@ -27,7 +27,7 @@ class AuthenticatedClient(PublicClient):
         session (requests.Session): Persistent HTTP connection object.
     """
     def __init__(self, key, b64secret, passphrase,
-                 api_url="https://api.pro.coinbase.com"):
+                 api_url="https://api.exchange.coinbase.com"):
         """ Create an instance of the AuthenticatedClient class.
 
         Args:

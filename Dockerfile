@@ -1,29 +1,22 @@
-FROM python:3.9.5-alpine
+FROM python:3.10-slim-bullseye
 
-RUN apk add --no-cache postgresql-libs && \
-    apk add --no-cache --virtual .build-deps \
-        build-base \
+RUN apt update && apt upgrade -y && \
+    apt install -y postgresql-client && \
+    apt install -y \
         gcc \
         musl-dev \
-        postgresql-dev && \
-    pip install --upgrade pip &&\
-    pip install pipenv
+        librdkafka-dev && \
+    pip install --upgrade pip
 
-RUN echo "@edge http://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories && \
-    echo "@edgecommunity http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-    apk add --no-cache alpine-sdk 'librdkafka@edgecommunity>=1.6.0' 'librdkafka-dev@edgecommunity>=1.6.0'
+# RUN pip install --upgrade pandas==1.4.2 --no-cache-dir
 
 COPY ./ /app/
 
 WORKDIR /app
 
-RUN pipenv install -e .
-
-RUN apk upgrade --force-broken-world && \
-    apk add --no-cache libstdc++ && \
-    apk --purge del .build-deps
+RUN pip install -e .
 
 EXPOSE 5000
 
-ENTRYPOINT [ "pipenv" ]
-CMD [ "run", "python", "plotr_signal/main.py" ]
+ENTRYPOINT [ "python" ]
+CMD [ "plotr_signal/main.py" ]

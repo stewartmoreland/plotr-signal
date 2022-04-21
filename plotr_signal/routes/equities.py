@@ -12,13 +12,9 @@ from requests.exceptions import HTTPError
 
 from plotr_signal.modules.polygon import Polygon
 
-v1_equity = Blueprint('insert-equity', __name__, url_prefix='/v1')
-v1_equity_price = Blueprint('insert-equity-price-data', __name__, url_prefix='/v1')
-v1_list_equities = Blueprint('list-equities', __name__, url_prefix='/v1')
-v1_equity_macd = Blueprint('macd-time-series', __name__, url_prefix='/v1')
-v1_equity_rsi = Blueprint('relative-strength-index', __name__, url_prefix='/v1')
+v1_equities = Blueprint('insert-equity', __name__, url_prefix='/api/v1/equities')
 
-@v1_equity.route('/equities/<symbol>', methods=['GET','POST', 'DELETE'])
+@v1_equities.route('/<symbol>', methods=['GET','POST', 'DELETE'])
 def insert_equity(symbol):
     """
     Adds ticker symbol to be tracked.
@@ -83,7 +79,7 @@ def insert_equity(symbol):
                 "message": json.dumps(e.detail)
             }
 
-@v1_list_equities.route('/equities', methods=['GET'])
+@v1_equities.route('/', methods=['GET'])
 def get_equities_list():
     """
     Gets list of tracked equities and ticker information.
@@ -100,7 +96,7 @@ def get_equities_list():
     
     return response
 
-@v1_equity_price.route('/equities/<symbol>/price', methods=['POST'])
+@v1_equities.route('/<symbol>/price', methods=['POST'])
 def load_equity_price(symbol):
     """
     Posts price details to time series database as a Pandas DataFrame for the requested ticker symbol.
@@ -143,7 +139,7 @@ def load_equity_price(symbol):
         "body": f"Successfully loaded {str(response.resultsCount)} price records for {symbol} from {body['from_']} to {body['to']} into  time series database"
     }
 
-@v1_equity_macd.route('/equities/<symbol>/macd', methods=['POST'])
+@v1_equities.route('/<symbol>/macd', methods=['POST'])
 def load_equity_macd(symbol):
     from plotr_signal.modules.influx import Influx
     from plotr_signal.modules.quantlib import QuantLib
@@ -162,7 +158,7 @@ def load_equity_macd(symbol):
         }
     }
 
-@v1_equity_rsi.route('/equities/<symbol>/rsi', methods=['POST'])
+@v1_equities.route('/<symbol>/rsi', methods=['POST'])
 def load_relative_strength_index(symbol):
     from plotr_signal.modules.influx import Influx
     from plotr_signal.modules.quantlib import QuantLib

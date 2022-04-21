@@ -6,7 +6,6 @@
 
 import requests
 
-
 class PublicClient(object):
     """cbpro public client API.
 
@@ -18,7 +17,7 @@ class PublicClient(object):
 
     """
 
-    def __init__(self, api_url='https://api.pro.coinbase.com', timeout=30):
+    def __init__(self, api_url='https://api.exchange.coinbase.com', timeout=30):
         """Create cbpro API public client.
 
         Args:
@@ -114,7 +113,7 @@ class PublicClient(object):
         return self._send_message('get',
                                   '/products/{}/ticker'.format(product_id))
 
-    def get_product_trades(self, product_id, before='', after='', limit=None, result=None):
+    def get_product_trades(self, product_id, before='', after='', limit=None):
         """List the latest trades for a product.
 
         This method returns a generator which may make multiple HTTP requests
@@ -143,8 +142,16 @@ class PublicClient(object):
                      "side": "sell"
          }]
         """
+        params = {}
+        if before is not None:
+            params['before'] = before
+        if after is not None:
+            params['after'] = after
+        if limit is None:
+            params['limit'] = 100
         return self._send_paginated_message('/products/{}/trades'
-                                            .format(product_id))
+                                            .format(product_id),
+                                            params,)
 
     def get_product_historic_rates(self, product_id, start=None, end=None,
                                    granularity=None):
@@ -189,10 +196,10 @@ class PublicClient(object):
         if end is not None:
             params['end'] = end
         if granularity is not None:
-            acceptedGrans = [60, 300, 900, 3600, 21600, 86400]
-            if granularity not in acceptedGrans:
+            accepted_grans = [60, 300, 900, 3600, 21600, 86400]
+            if granularity not in accepted_grans:
                 raise ValueError( 'Specified granularity is {}, must be in approved values: {}'.format(
-                        granularity, acceptedGrans) )
+                        granularity, accepted_grans) )
 
             params['granularity'] = granularity
         return self._send_message('get',
