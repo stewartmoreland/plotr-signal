@@ -18,7 +18,7 @@ class AppException(Exception):
         self.code = code
 
 
-class ValidationAppException(AppException):
+class ValidationException(AppException):
     """
     Exception for validation errors.
     """

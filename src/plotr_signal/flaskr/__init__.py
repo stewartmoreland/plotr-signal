@@ -18,6 +18,7 @@ from pandas._libs.tslibs.timestamps import Timestamp
 from plotr_signal.modules.exceptions import AppExceptionHandler
 
 from plotr_signal.routes import *
+from flask_auth_lib.routes import v1_auth
 
 
 def create_app(config_object):
@@ -46,6 +47,7 @@ def create_app(config_object):
 
     # Register api blueprints
     app.register_blueprint(v1_root)
+    app.register_blueprint(v1_auth)
     app.register_blueprint(v1_equities)
     app.register_blueprint(v1_crypto)
 

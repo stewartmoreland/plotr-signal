@@ -63,27 +63,21 @@ def load_crypto_products():
     from plotr_signal.database import db_session
     from plotr_signal.database.models import CryptoProducts
 
-    try:
-        client = cbpro.PublicClient()
-        response = client.get_products()
-    except HTTPError as e:
-        raise e
+    client = cbpro.PublicClient()
+    response = client.get_products()
 
-    try:
-        products = [
-            CryptoProducts(product=resp['id'],
-                           name=resp['display_name'],
-                           base_currency=resp['base_currency'],
-                           quote_currency=resp['quote_currency'],
-                           base_min_size=resp['base_min_size'],
-                           base_max_size=resp['base_max_size'])
-            for resp in response]
-        db_session.bulk_save_objects(products)
-        db_session.commit()
-        return jsonify({"message": f"Successfully loaded crypto products from Coinbase Pro",
-            "products": response}), 200
-    except IntegrityError as e:
-        raise e
+    products = [
+        CryptoProducts(product=resp['id'],
+                        name=resp['display_name'],
+                        base_currency=resp['base_currency'],
+                        quote_currency=resp['quote_currency'],
+                        base_min_size=resp['base_min_size'],
+                        base_max_size=resp['base_max_size'])
+        for resp in response]
+    db_session.bulk_save_objects(products)
+    db_session.commit()
+    return jsonify({"message": f"Successfully loaded crypto products from Coinbase Pro",
+        "products": response}), 200
 
 
 @v1_crypto.route('/import/history', methods=['POST'])
