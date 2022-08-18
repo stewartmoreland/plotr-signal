@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Exceptions for the plotr_signal package.
 """

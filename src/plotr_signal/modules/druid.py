@@ -1,4 +1,7 @@
+#!/usr/bin/env python3
+
 import json
+
 from pandas.core.frame import DataFrame
 from pydruid.client import PyDruid
 from pandas import Series

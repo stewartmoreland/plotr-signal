@@ -39,7 +39,8 @@ setup(
         'flask-login==0.6.0',
         'requests==2.27.1',
         'oauthlib==3.2.0',
-        'pyOpenSSL==22.0.0'
+        'pyOpenSSL==22.0.0',
+        'plotr-modules @ https://github.com/plotr-ai/plotr-modules/archive/main.zip'
     ],
     setup_requires=[
         'pytest-runner'

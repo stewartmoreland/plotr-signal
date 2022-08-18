@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from pandas import DataFrame, to_datetime
 from datetime import date, datetime, timedelta
 

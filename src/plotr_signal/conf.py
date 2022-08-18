@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+
 """ Application configuration
 
 This module is used to provide environment-based configuration objects
 for the flask application context on start up.
 """
+
 import os
 import json
 import socket
@@ -26,7 +28,11 @@ class Config(object):
     INFLUXDB_V2_ORG = os.environ.get('INFLUXDB_V2_ORG')
     INFLUXDB_V2_ORG_ID = os.environ.get('INFLUXDB_V2_ORG_ID')
     INFLUXDB_V2_TOKEN = os.environ.get('INFLUXDB_V2_TOKEN')
-    DRUID_HOST = os.environ.get('DRUID_HOST')
+
+    # DRUID_HOST = os.environ.get('DRUID_HOST')
+
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 
     REDIS_HOST = os.environ.get('REDIS_HOST')
     REDIS_PORT = os.environ.get('REDIS_PORT') or '6379'

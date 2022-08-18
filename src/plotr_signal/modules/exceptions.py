@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+
 """ Application level exception handling
 
 This module is used to provide a global exception handler for all
 exceptions, as well as provide additional exceptions for application-
 specific scenarios.
 """
+
 import logging
 
 from flask import jsonify

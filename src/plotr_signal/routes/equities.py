@@ -10,14 +10,25 @@ from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from requests.exceptions import HTTPError
 
+
+from flask_login import (
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
+
 from plotr_signal.modules.polygon import Polygon
 
-v1_equities = Blueprint('insert-equity', __name__, url_prefix='/api/v1/equities')
+v1_equities = Blueprint('insert-equity', __name__,
+                        url_prefix='/api/v1/equities')
 
-@v1_equities.route('/<symbol>', methods=['GET','POST', 'DELETE'])
+
+@v1_equities.route('/<symbol>', methods=['GET', 'POST', 'DELETE'])
+@login_required
 def insert_equity(symbol):
     """
-    Adds ticker symbol to be tracked.
+    CRUD operations for tracked equities.
     @symbol : str - ticker details to be added for tracking
     """
     from plotr_signal.database import db_session
@@ -27,7 +38,8 @@ def insert_equity(symbol):
         try:
             client = Polygon(app.config['POLYGON_API_KEY'])
             resp = client.get_equity_info(symbol)
-            equity = Symbols(ticker=resp.symbol, name=resp.name, sector=resp.sector)
+            equity = Symbols(ticker=resp.symbol,
+                             name=resp.name, sector=resp.sector)
         except HTTPError as e:
             raise e
 
@@ -35,49 +47,50 @@ def insert_equity(symbol):
             db_session.add(equity)
             db_session.commit()
             return {
-                "status": 200,
+                "status": "ok",
                 "body": f"Successfully entered record for {equity.name}."
-            }
+            }, 200
         except IntegrityError as e:
             return {
-                "status": 400,
+                "status": "DuplicateEntry",
                 "body": "Duplicate entry found in table.",
                 "message": json.dumps(e.detail)
-            }
+            }, 400
 
     elif request.method == 'GET':
         try:
             equity = Symbols.query.filter(Symbols.ticker == symbol).first()
             return {
-                "status": 200,
+                "status": "ok",
                 "equity": {
                     "ticker": equity.ticker,
                     "name": equity.name,
                     "sector": equity.sector
                 }
-            }
+            }, 200
         except SQLAlchemyError as e:
             return {
-                "status": 400,
+                "status": "NoEntryFound",
                 "body": f"No entry found for {symbol}",
                 "message": json.dumps(e.__dict__)
-            }
-    
+            }, 400
+
     elif request.method == 'DELETE':
         try:
             equity = Symbols.query.filter(Symbols.ticker == symbol).first()
             db_session.delete(equity)
             db_session.commit()
             return {
-                "status": 200,
+                "status": "ok",
                 "body": f"Successfully removed record for {equity.name}"
-            }
+            }, 200
         except IntegrityError as e:
             return {
-                "status": 400,
+                "status": "NoEntryFound",
                 "body": f"No entry found for {symbol}",
                 "message": json.dumps(e.detail)
-            }
+            }, 400
+
 
 @v1_equities.route('/', methods=['GET'])
 def get_equities_list():
@@ -88,13 +101,12 @@ def get_equities_list():
     """
     from plotr_signal.database.models import Symbols
 
-    response = { "status": 200, "equities": [] }
-    equities = Symbols.query.all()
+    response = {"status": "ok", "equities": []}
+    response['equities'] = [{"ticker": equity.ticker, "name": equity.name,
+                             "sector": equity.sector} for equity in Symbols.query.all()]
 
-    for equity in equities:
-        response['equities'].append({ "ticker": equity.ticker, "name": equity.name, "sector": equity.sector })
-    
-    return response
+    return response, 200
+
 
 @v1_equities.route('/<symbol>/price', methods=['POST'])
 def load_equity_price(symbol):
@@ -111,16 +123,17 @@ def load_equity_price(symbol):
     influx_client = Influx()
     body = json.loads(request.get_data())
 
-    response = polygon_client.get_historical_data(escape(symbol), body['from_'], body['to'])
+    response = polygon_client.get_historical_data(
+        escape(symbol), body['from_'], body['to'])
     results = response.__dict__
 
     df = DataFrame(data=results['results'])
     df['t'] = to_datetime(df['t'], unit='ms')
-    df.rename(columns={ 't': 'timestamp' }, inplace=True)
+    df.rename(columns={'t': 'timestamp'}, inplace=True)
     df.set_index(['timestamp'], inplace=True)
     for column in ['o', 'c', 'h', 'l', 'v', 'vw']:
         df[column] = df[column].astype(float)
-    
+
     df.rename(columns={
         "o": "open",
         "c": "close",
@@ -129,39 +142,44 @@ def load_equity_price(symbol):
         "v": "volume",
         "vw": "weighted_volume"
     }, inplace=True)
-    
+
     app.logger.info(df.head())
 
-    influx_client.write_dataframe(dataframe=df, bucket=symbol, measurement='price')
+    influx_client.write_dataframe(
+        dataframe=df, bucket=symbol, measurement='price')
 
     return {
-        "status": 200,
+        "status": "ok",
         "body": f"Successfully loaded {str(response.resultsCount)} price records for {symbol} from {body['from_']} to {body['to']} into  time series database"
-    }
+    }, 200
+
 
 @v1_equities.route('/<symbol>/macd', methods=['POST'])
 def load_equity_macd(symbol):
     from plotr_signal.modules.influx import Influx
-    from plotr_signal.modules.quantlib import QuantLib
+    from plotr_modules import QuantLib as ql
 
     body = json.loads(request.get_data())
     influx_client = Influx()
-    df = influx_client.get_equity_field_dataframe(symbol=symbol, from_=body['from_'], to=body['to'], interval=body['interval'])
-    macd = QuantLib.MACD(price_data=df)
-    influx_client.write_dataframe(dataframe=macd, bucket=symbol, measurement='macd')
+    df = influx_client.get_equity_field_dataframe(
+        symbol=symbol, from_=body['from_'], to=body['to'], interval=body['interval'])
+    macd = ql.macd(price_data=df)
+    influx_client.write_dataframe(
+        dataframe=macd, bucket=symbol, measurement='macd')
 
     return {
-        "status": 200,
+        "status": "ok",
         "body": {
             "macd": macd['macd'].to_json(),
             "signal": macd['signal'].to_json()
         }
-    }
+    }, 200
+
 
 @v1_equities.route('/<symbol>/rsi', methods=['POST'])
 def load_relative_strength_index(symbol):
     from plotr_signal.modules.influx import Influx
-    from plotr_signal.modules.quantlib import QuantLib
+    from plotr_modules import QuantLib as ql
 
     body = json.loads(request.get_data())
     time_period = int
@@ -171,12 +189,13 @@ def load_relative_strength_index(symbol):
     else:
         time_period = 14
 
-    equity_df = Influx().get_equity_field_dataframe(symbol, from_=body['from_'], to=body['to'], interval='15m')
-    df = QuantLib.RSI(price_data=equity_df, time_period=time_period)
+    equity_df = Influx().get_equity_field_dataframe(
+        symbol, from_=body['from_'], to=body['to'], interval='15m')
+    df = ql.rsi(price_data=equity_df, time_period=time_period)
 
     Influx().write_dataframe(dataframe=df, bucket=symbol, measurement='rsi')
 
     return {
-        "status": 200,
-        "body": f"Successfully wrote RSI values for {symbol}"
-    }
+        "status": "ok",
+        "message": f"Successfully wrote RSI values for {symbol}"
+    }, 200

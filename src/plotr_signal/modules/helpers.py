@@ -55,4 +55,3 @@ def validate_request(schema):
         raise ValidationAppException(data=errors)
 
     return data
-

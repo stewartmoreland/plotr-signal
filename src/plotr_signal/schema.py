@@ -1,6 +1,9 @@
+#!/usr/bin/env python3
+
 """
 Marshmallow schema for the plotr_signal package.
 """
+
 from marshmallow import Schema, fields, pre_load, post_load, missing
 
 class BaseSchema(Schema):
@@ -15,4 +18,3 @@ class BaseSchema(Schema):
         """
         if field_obj.missing == missing:
             field_obj.missing = None
-

@@ -4,6 +4,7 @@
 This module is used to initialize the Flask app with the given
 configuration and register handlers.
 """
+
 import os, json
 from datetime import date, datetime
 
@@ -18,7 +19,7 @@ from pandas._libs.tslibs.timestamps import Timestamp
 from plotr_signal.modules.exceptions import AppExceptionHandler
 
 from plotr_signal.routes import *
-from flask_auth_lib.routes import v1_auth
+from flask_auth_lib.routes import v1_oauth
 
 
 def create_app(config_object):
@@ -37,7 +38,6 @@ def create_app(config_object):
 
     app.config.from_object(config_object)
 
-    # Configuration to minify JSON output
     app.json_encoder = CustomJSONEncoder
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
@@ -47,7 +47,7 @@ def create_app(config_object):
 
     # Register api blueprints
     app.register_blueprint(v1_root)
-    app.register_blueprint(v1_auth)
+    app.register_blueprint(v1_oauth)
     app.register_blueprint(v1_equities)
     app.register_blueprint(v1_crypto)
 
@@ -99,13 +99,8 @@ def create_app(config_object):
     
     @app.route('/apispec', methods=['GET'])
     def get_swagger_ui():
-        """ Serve the swagger docs from the /apispec directory
-
-        Args:
-            path (string): The path to the swagger docs
-
-        Returns:
-            Response: The swagger docs
+        """ 
+        Serve Swagger docs
         """
         app.logger.info('Serving docs')
         return render_template('swaggerui.html')
@@ -116,10 +111,6 @@ def create_app(config_object):
 
     return app
 
-class MinifyJSONEncoder(JSONEncoder):
-    """Used to minify JSON output"""
-    item_separator = ','
-    key_separator = ':'
 
 class CustomJSONEncoder(JSONEncoder):
     def _encode(self, obj):

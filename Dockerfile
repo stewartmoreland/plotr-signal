@@ -19,4 +19,4 @@ RUN pip install -e .
 EXPOSE 5000
 
 ENTRYPOINT [ "python" ]
-CMD [ "plotr_signal/main.py" ]
+CMD [ "src/plotr_signal/main.py" ]
